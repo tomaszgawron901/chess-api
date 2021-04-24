@@ -1,0 +1,3 @@
+[submodule "chess-class-lib"]
+	path = chess-class-lib
+	url = ../../tomaszgawron901/chess-class-lib.git
