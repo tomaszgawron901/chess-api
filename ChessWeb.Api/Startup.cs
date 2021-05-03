@@ -1,4 +1,5 @@
 using ChessWeb.Api.Hubs;
+using ChessWeb.Api.Services;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
@@ -29,13 +30,16 @@ namespace ChessWeb.Api
                 options.AddDefaultPolicy(
                     builder =>
                     {
-                        builder.WithOrigins(Configuration.GetSection("AllowedHosts").Get<string[]>())
+                        builder//.WithOrigins(Configuration.GetSection("AllowedHosts").Get<string[]>())
+                            .AllowAnyOrigin()
                             .AllowAnyHeader()
-                            .AllowAnyMethod()
-                            .AllowCredentials();
+                            .AllowAnyMethod();
                     });
             });
 
+            services.AddSingleton<GameService>();
+
+            services.AddControllers();
             services.AddSignalR();
             services.AddResponseCompression(opts =>
             {
@@ -58,6 +62,7 @@ namespace ChessWeb.Api
             app.UseEndpoints(endpoints =>
             {
                 endpoints.MapHub<GameHub>("/gamehub");
+                endpoints.MapControllers();
             });
         }
     }

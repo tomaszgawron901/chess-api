@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.SignalR;
+﻿using ChessWeb.Api.Services;
+using Microsoft.AspNetCore.SignalR;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -8,7 +9,11 @@ namespace ChessWeb.Api.Hubs
 {
     public class GameHub: Hub
     {
-        public static Dictionary<string, Object> games;
+        private readonly GameService gameService;
+        public GameHub(GameService gameService)
+        {
+            this.gameService = gameService;
+        }
 
         public override Task OnConnectedAsync()
         {
@@ -18,17 +23,6 @@ namespace ChessWeb.Api.Hubs
         public override Task OnDisconnectedAsync(Exception exception)
         {
             return base.OnDisconnectedAsync(exception);
-        }
-
-
-        public Task CreateGame()
-        {
-            throw new NotImplementedException();
-        }
-
-        public Task StartGame()
-        {
-            throw new NotImplementedException();
         }
 
         public Task JoinGame(string roomName)
