@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 
 namespace ChessWeb.Api.Controllers
 {
-    [Route("[controller]/[action]")]
+    [Route("api/[controller]/[action]")]
     [ApiController]
     public class GameController : ControllerBase
     {
@@ -19,13 +19,13 @@ namespace ChessWeb.Api.Controllers
         }
 
         [HttpPost]
-        public ActionResult<string> CreateGameRoom(GameOptions gameOptions)
+        public ActionResult CreateGameRoom([FromBody]GameOptions gameOptions)
         {
             try
             {
                 var roomCreationResult = this.gameService.CreateNewGameRoom();
                 roomCreationResult.gameRoom.StartNewGame(gameOptions);
-                return Ok(roomCreationResult.key);
+                return Created(roomCreationResult.key, gameOptions);
             }
             catch
             {

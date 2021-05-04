@@ -33,12 +33,12 @@ namespace ChessWeb.Api
                         builder//.WithOrigins(Configuration.GetSection("AllowedHosts").Get<string[]>())
                             .AllowAnyOrigin()
                             .AllowAnyHeader()
-                            .AllowAnyMethod();
+                            .AllowAnyMethod()
+                            .WithExposedHeaders("Location");
                     });
             });
 
             services.AddSingleton<GameService>();
-
             services.AddControllers();
             services.AddSignalR();
             services.AddResponseCompression(opts =>
