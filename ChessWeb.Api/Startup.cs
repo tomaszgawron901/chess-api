@@ -30,8 +30,8 @@ namespace ChessWeb.Api
                 options.AddDefaultPolicy(
                     builder =>
                     {
-                        builder//.WithOrigins(Configuration.GetSection("AllowedHosts").Get<string[]>())
-                            .AllowAnyOrigin()
+                        builder
+                            .WithOrigins(Configuration.GetSection("AllowedHosts").Get<string[]>())
                             .AllowAnyHeader()
                             .AllowAnyMethod()
                             .WithExposedHeaders("Location");

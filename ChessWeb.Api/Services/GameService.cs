@@ -1,34 +1,53 @@
-﻿using System;
+﻿using ChessClassLibrary.Games;
+using ChessClassLibrary.Models;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 
 namespace ChessWeb.Api.Services
 {
-    public class GameService
+    public class GameService 
     {
-        private readonly Dictionary<string, GameManager> GameRooms;
+        private readonly Dictionary<string, GameRoom> GameRooms;
         public GameService()
         {
-            this.GameRooms = new Dictionary<string, GameManager>();
+            this.GameRooms = new Dictionary<string, GameRoom>();
         }
 
-        public bool DeleteGameRoom(string roomKey)
+        public void DeleteGameRoom(string roomKey)
         {
-            throw new NotImplementedException();
+            this.GameRooms.Remove(roomKey);
         }
 
-        public GameManager GetGameRoom(string roomKey)
+        public GameRoom GetGameRoom(string roomKey)
         {
-            throw new NotImplementedException();
+            if (GameRooms.ContainsKey(roomKey))
+            {
+                return GameRooms.GetValueOrDefault(roomKey);
+            }
+            else
+            {
+                throw new KeyNotFoundException("Room does not exist.");
+            }
         }
 
-        public (string key, GameManager gameRoom) CreateNewGameRoom()
+        public (string key, GameRoom gameRoom) CreateNewGameRoom()
         {
             string key = DateTimeOffset.Now.ToUnixTimeMilliseconds().ToString();
-            GameManager gameRoom = new GameManager();
+            GameRoom gameRoom = new GameRoom();
             GameRooms.Add(key, gameRoom);
             return (key, gameRoom);
+        }
+
+        public GameOptions GetGameOptionsByKey(string gameKey)
+        {
+            return this.GameRooms.GetValueOrDefault(gameKey).gameOptions;
+        }
+
+        public IGame GetGameByKey(string gameKey)
+        {
+            return this.GameRooms.GetValueOrDefault(gameKey).game;
         }
     }
 }

@@ -1,4 +1,5 @@
-﻿using ChessWeb.Api.Services;
+﻿using ChessClassLibrary.Models;
+using ChessWeb.Api.Services;
 using Microsoft.AspNetCore.SignalR;
 using System;
 using System.Collections.Generic;
@@ -25,14 +26,28 @@ namespace ChessWeb.Api.Hubs
             return base.OnDisconnectedAsync(exception);
         }
 
-        public Task JoinGame(string roomName)
+        public async Task JoinGame(string roomName)
         {
-            return Groups.AddToGroupAsync(Context.ConnectionId, roomName);
+            var gameRoom = this.gameService.GetGameRoom(roomName);
+            gameRoom.AddMissingPlayer(Context.ConnectionId);
+            await Groups.AddToGroupAsync(Context.ConnectionId, roomName);
+
+            await Clients.GroupExcept(roomName, Context.ConnectionId).SendAsync("GameOptionsChanged", roomName, gameRoom.gameOptions);
         }
 
         public Task LeaveGame(string roomName)
         {
             return Groups.RemoveFromGroupAsync(Context.ConnectionId, roomName);
+        }
+
+
+        public async Task PerformMove(string roomName, BoardMove move)
+        {
+            var gameRoom = this.gameService.GetGameRoom(roomName);
+            if (gameRoom.TryPerformMove(Context.ConnectionId, move))
+            {
+                await Clients.Group(roomName).SendAsync("PerformMove", roomName, move);
+            }
         }
     }
 }

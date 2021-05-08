@@ -32,5 +32,18 @@ namespace ChessWeb.Api.Controllers
                 return BadRequest();
             }
         }
+
+        [HttpGet]
+        public ActionResult GetGameOptionsByKey(string gameKey)
+        {
+            try
+            {
+                return Ok(this.gameService.GetGameOptionsByKey(gameKey));
+            }
+            catch
+            {
+                return BadRequest();
+            }
+        }
     }
 }
