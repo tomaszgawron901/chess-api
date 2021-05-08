@@ -26,13 +26,14 @@ namespace ChessWeb.Api.Hubs
             return base.OnDisconnectedAsync(exception);
         }
 
-        public async Task JoinGame(string roomName)
+        public async Task<GameOptions> JoinGame(string roomName)
         {
             var gameRoom = this.gameService.GetGameRoom(roomName);
             gameRoom.AddMissingPlayer(Context.ConnectionId);
             await Groups.AddToGroupAsync(Context.ConnectionId, roomName);
 
             await Clients.GroupExcept(roomName, Context.ConnectionId).SendAsync("GameOptionsChanged", roomName, gameRoom.gameOptions);
+            return gameRoom.gameOptions;
         }
 
         public Task LeaveGame(string roomName)
