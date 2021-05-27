@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.ResponseCompression;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -39,6 +40,7 @@ namespace ChessWeb.Api
             });
 
             services.AddSingleton<GameService>();
+            services.AddSingleton<ConnectionToRoomService>();
             services.AddControllers();
             services.AddSignalR();
             services.AddResponseCompression(opts =>
@@ -62,7 +64,6 @@ namespace ChessWeb.Api
             app.UseEndpoints(endpoints =>
             {
                 endpoints.MapHub<GameHub>("/gamehub");
-                endpoints.MapControllers();
             });
         }
     }
