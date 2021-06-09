@@ -42,6 +42,8 @@ namespace ChessWeb.Api.Classes
             {
                 case GameVarient.Standard:
                     return new ClassicGame();
+                case GameVarient.Knightmate:
+                    return new KnightmateGame();
                 default:
                     return new ClassicGame();
             }
