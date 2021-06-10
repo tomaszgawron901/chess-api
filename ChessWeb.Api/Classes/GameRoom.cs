@@ -28,7 +28,7 @@ namespace ChessWeb.Api.Classes
             this.gameManager = new GameManager(
                 this.ConverGameVarientToGame(this.gameOptions.GameVarient), 
                 60000D * this.gameOptions.MinutesPerSide, 
-                1000D * this.gameOptions.MinutesPerSide,
+                1000D * this.gameOptions.IncrementInSeconds,
                 this.afterWin
             );
         }
