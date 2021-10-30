@@ -7,9 +7,12 @@ using System.Linq;
 using System.Threading.Tasks;
 using ChessWeb.Api.Extensions;
 using ChessClassLibrary.enums;
+using SignalRSwaggerGen.Attributes;
+using SignalRSwaggerGen.Enums;
 
 namespace ChessWeb.Api.Hubs
 {
+    [SignalRHub(path: "/gamehub")]
     public class GameHub: Hub
     {
         private readonly GameService gameService;
@@ -27,11 +30,6 @@ namespace ChessWeb.Api.Hubs
             return base.OnConnectedAsync();
         }
 
-        /// <summary>
-        /// Action performed after user disconnection. Removes disconnected user from the game and notifies other users in game room about it.
-        /// </summary>
-        /// <param name="exception"></param>
-        /// <returns></returns>
         public override async Task OnDisconnectedAsync(Exception exception)
         {
             
@@ -57,11 +55,10 @@ namespace ChessWeb.Api.Hubs
             await base.OnDisconnectedAsync(exception);
         }
 
-        /// <summary>
-        /// Creates a game room with given options and associates creator to the room.
-        /// </summary>
-        /// <param name="gameOptions"></param>
-        /// <returns>The unique game key</returns>
+        [SignalRMethod(
+            summary: "Creates a game room with given options and associates creator to the room. Returns the unique game key",
+            autoDiscover: AutoDiscover.Args
+        )]
         public async Task<string> CreateGameRoom(GameOptions gameOptions)
         {
             var roomCreationResult = this.gameService.CreateNewGameRoom();
@@ -70,14 +67,10 @@ namespace ChessWeb.Api.Hubs
         }
 
 
-        /// <summary>
-        /// Associates sender to game room with given name.
-        /// If the room does not exist or is full throws exception.
-        /// </summary>
-        /// <param name="roomName">Unique game key</param>
-        /// <returns>
-        /// Game options of the game room.
-        /// </returns>
+        [SignalRMethod(
+            summary: "Associates sender to game room with given name. Returns game options of the game room.",
+            autoDiscover: AutoDiscover.Args
+        )]
         public async Task<GameOptions> JoinGame(string roomName)
         {
             var gameRoom = this.gameService.GetGameRoom(roomName);
@@ -92,24 +85,20 @@ namespace ChessWeb.Api.Hubs
             return gameRoom.gameOptions;
         }
 
-
-        /// <summary>
-        /// Removes sender from the game room with given game room name.
-        /// </summary>
-        /// <param name="roomName">Unique game key</param>
-        /// <returns></returns>
+        [SignalRMethod(
+            summary: "Removes sender from the game room with given game room name.",
+            autoDiscover: AutoDiscover.Args
+        )]
         public async Task LeaveGame(string roomName)
         {
             await Groups.RemoveFromGroupAsync(Context.ConnectionId, roomName);
         }
 
 
-        /// <summary>
-        /// If possible performs given move on board in the game room with given game room name.
-        /// </summary>
-        /// <param name="roomName"></param>
-        /// <param name="move"></param>
-        /// <returns></returns>
+        [SignalRMethod(
+            summary: "If possible performs given move on board in the game room with given game room name.",
+            autoDiscover: AutoDiscover.Args
+        )]
         public async Task PerformMove(string roomName, BoardMove move)
         {
             var gameRoom = this.gameService.GetGameRoom(roomName);
