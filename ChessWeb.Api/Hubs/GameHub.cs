@@ -27,6 +27,11 @@ namespace ChessWeb.Api.Hubs
             return base.OnConnectedAsync();
         }
 
+        /// <summary>
+        /// Action performed after user disconnection. Removes disconnected user from the game and notifies other users in game room about it.
+        /// </summary>
+        /// <param name="exception"></param>
+        /// <returns></returns>
         public override async Task OnDisconnectedAsync(Exception exception)
         {
             
@@ -52,6 +57,11 @@ namespace ChessWeb.Api.Hubs
             await base.OnDisconnectedAsync(exception);
         }
 
+        /// <summary>
+        /// Creates a game room with given options and associates creator to the room.
+        /// </summary>
+        /// <param name="gameOptions"></param>
+        /// <returns>The unique game key</returns>
         public async Task<string> CreateGameRoom(GameOptions gameOptions)
         {
             var roomCreationResult = this.gameService.CreateNewGameRoom();
@@ -59,6 +69,15 @@ namespace ChessWeb.Api.Hubs
             return roomCreationResult.key;
         }
 
+
+        /// <summary>
+        /// Associates sender to game room with given name.
+        /// If the room does not exist or is full throws exception.
+        /// </summary>
+        /// <param name="roomName">Unique game key</param>
+        /// <returns>
+        /// Game options of the game room.
+        /// </returns>
         public async Task<GameOptions> JoinGame(string roomName)
         {
             var gameRoom = this.gameService.GetGameRoom(roomName);
@@ -73,12 +92,24 @@ namespace ChessWeb.Api.Hubs
             return gameRoom.gameOptions;
         }
 
-        public Task LeaveGame(string roomName)
+
+        /// <summary>
+        /// Removes sender from the game room with given game room name.
+        /// </summary>
+        /// <param name="roomName">Unique game key</param>
+        /// <returns></returns>
+        public async Task LeaveGame(string roomName)
         {
-            return Groups.RemoveFromGroupAsync(Context.ConnectionId, roomName);
+            await Groups.RemoveFromGroupAsync(Context.ConnectionId, roomName);
         }
 
 
+        /// <summary>
+        /// If possible performs given move on board in the game room with given game room name.
+        /// </summary>
+        /// <param name="roomName"></param>
+        /// <param name="move"></param>
+        /// <returns></returns>
         public async Task PerformMove(string roomName, BoardMove move)
         {
             var gameRoom = this.gameService.GetGameRoom(roomName);
