@@ -44,7 +44,7 @@ namespace ChessWeb.Api
             services.AddSingleton<GameService>();
             services.AddSingleton<ConnectionToRoomService>();
             services.AddControllers();
-            services.AddSignalR().AddAzureSignalR(Configuration["AZURESIGNALR_CONNECTIONSTRING"]);
+            services.AddSignalR().AddAzureSignalR(Configuration["AZURESIGNALR:CONNECTIONSTRING"]);
             services.AddResponseCompression(opts =>
             {
                 opts.MimeTypes = ResponseCompressionDefaults.MimeTypes.Concat(
@@ -55,7 +55,6 @@ namespace ChessWeb.Api
                 options.SwaggerDoc("v1", new OpenApiInfo { Title = "Chess API v1", Version = "v1" });
                 options.DocumentFilter<SignalRSwaggerGen.SignalRSwaggerGen>(new List<Assembly> { typeof(GameHub).Assembly });
             });
-            services.AddApplicationInsightsTelemetry(Configuration["APPINSIGHTS_CONNECTIONSTRING"]);
         }
 
         public void Configure(IApplicationBuilder app, IWebHostEnvironment env)

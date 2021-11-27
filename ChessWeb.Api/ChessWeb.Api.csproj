@@ -2,12 +2,11 @@
 
   <PropertyGroup>
     <TargetFramework>net5.0</TargetFramework>
-    <UserSecretsId>ed77a2cf-ec11-4fa1-8fe6-868ef82ded60</UserSecretsId>
-    <ApplicationInsightsResourceId>/subscriptions/a2bbb970-bfc6-4431-a894-5b106a996ba4/resourceGroups/ChessWebApplication/providers/microsoft.insights/components/ChessWebApi20210509195304</ApplicationInsightsResourceId>
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Microsoft.ApplicationInsights.AspNetCore" Version="2.15.0" />
+    <PackageReference Include="Azure.Extensions.AspNetCore.Configuration.Secrets" Version="1.0.0" />
+    <PackageReference Include="Azure.Identity" Version="1.4.0" />
     <PackageReference Include="Microsoft.AspNetCore.SignalR.Common" Version="5.0.5" />
     <PackageReference Include="Microsoft.Azure.SignalR" Version="1.4.0" />
     <PackageReference Include="SignalRSwaggerGen" Version="2.4.0" />
