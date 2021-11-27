@@ -1,12 +1,12 @@
 {
   "dependencies": {
-    "secrets2": {
+    "secrets1": {
       "type": "secrets",
       "connectionId": "VaultUri"
     },
     "signalr1": {
       "type": "signalr",
-      "connectionId": "AZURESIGNALR:CONNECTIONSTRING"
+      "connectionId": "Azure:SignalR:ConnectionString"
     }
   }
 }
