@@ -1,21 +1,22 @@
 {
   "dependencies": {
-    "secrets1": {
+    "secrets2": {
       "restored": true,
-      "restoreTime": "2021-11-25T21:12:50.3756866Z"
+      "restoreTime": "2021-11-26T17:25:02.4921884Z"
     },
     "signalr1": {
       "restored": true,
       "restoreTime": "2021-11-25T21:14:32.6708784Z"
-    },
-    "appInsights1": {
-      "restored": true,
-      "restoreTime": "2021-11-17T16:52:36.9750894Z"
     }
   },
   "parameters": {
-    "appInsights1.resourceGroupName": {
-      "Name": "appInsights1.resourceGroupName",
+    "secrets2.subscriptionId": {
+      "Name": "secrets2.subscriptionId",
+      "Type": "subscription",
+      "Value": "a2bbb970-bfc6-4431-a894-5b106a996ba4"
+    },
+    "secrets2.resourceGroupName": {
+      "Name": "secrets2.resourceGroupName",
       "Type": "resourceGroup",
       "Value": "ChessWebApplication"
     },
@@ -23,11 +24,6 @@
       "Name": "signalr1.resourceGroupName",
       "Type": "resourceGroup",
       "Value": "ChessWebApplication"
-    },
-    "appInsights1.subscriptionId": {
-      "Name": "appInsights1.subscriptionId",
-      "Type": "subscription",
-      "Value": "a2bbb970-bfc6-4431-a894-5b106a996ba4"
     },
     "signalr1.subscriptionId": {
       "Name": "signalr1.subscriptionId",
