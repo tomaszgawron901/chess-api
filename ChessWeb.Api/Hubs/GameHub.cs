@@ -2,18 +2,26 @@
 using ChessWeb.Api.Services;
 using Microsoft.AspNetCore.SignalR;
 using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Threading.Tasks;
-using ChessWeb.Api.Extensions;
-using ChessClassLibrary.enums;
 using SignalRSwaggerGen.Attributes;
 using SignalRSwaggerGen.Enums;
+using ChessWeb.Api.Models;
+using ChessClassLibrary.enums;
 
 namespace ChessWeb.Api.Hubs
 {
+    public interface IGameHubClient
+    {
+        Task GameOptionsChanged(string roomName, GameOptions gameOptions);
+        Task PerformMove(string roomName, BoardMove move, SharedClock clock1, SharedClock clock2);
+        Task GameEnded(string roomName, PieceColor? winner);
+        Task PlayerLeft(string roomName, string player);
+        Task PlayerJoined(string roomName, string player);
+    }
+
+
     [SignalRHub(path: "/gamehub")]
-    public class GameHub: Hub
+    public class GameHub: Hub<IGameHubClient>
     {
         private readonly GameService gameService;
         private readonly ConnectionToRoomService connectionToRoomService;
@@ -25,11 +33,13 @@ namespace ChessWeb.Api.Hubs
             this.connectionToRoomService = connectionToRoomService;
         }
 
+        [SignalRHidden]
         public override Task OnConnectedAsync()
         {
             return base.OnConnectedAsync();
         }
 
+        [SignalRHidden]
         public override async Task OnDisconnectedAsync(Exception exception)
         {
             
@@ -47,8 +57,8 @@ namespace ChessWeb.Api.Hubs
                 {
                     gameRoom.ResetGame();
                     Task.WaitAll(new Task[] {
-                        Clients.Group(roomName).SendGameOptions(roomName, gameRoom.gameOptions),
-                        Clients.Group(roomName).SendServerMessage(roomName, "player left"),
+                        Clients.Group(roomName).GameOptionsChanged(roomName, gameRoom.gameOptions),
+                        Clients.Group(roomName).PlayerLeft(roomName, user),
                     });
                 }
             }
@@ -57,7 +67,7 @@ namespace ChessWeb.Api.Hubs
 
         [SignalRMethod(
             summary: "Creates a game room with given options and associates creator to the room. Returns the unique game key",
-            autoDiscover: AutoDiscover.Args
+            autoDiscover: AutoDiscover.Params
         )]
         public async Task<string> CreateGameRoom(GameOptions gameOptions)
         {
@@ -69,7 +79,7 @@ namespace ChessWeb.Api.Hubs
 
         [SignalRMethod(
             summary: "Associates sender to game room with given name. Returns game options of the game room.",
-            autoDiscover: AutoDiscover.Args
+            autoDiscover: AutoDiscover.Params
         )]
         public async Task<GameOptions> JoinGame(string roomName)
         {
@@ -79,15 +89,15 @@ namespace ChessWeb.Api.Hubs
             await Groups.AddToGroupAsync(Context.ConnectionId, roomName);
 
             Task.WaitAll(new Task[] {
-                 Clients.GroupExcept(roomName, Context.ConnectionId).SendGameOptions(roomName, gameRoom.gameOptions),
-                 Clients.GroupExcept(roomName, Context.ConnectionId).SendServerMessage(roomName, "new player joined"),
+                 Clients.GroupExcept(roomName, Context.ConnectionId).GameOptionsChanged(roomName, gameRoom.gameOptions),
+                 Clients.GroupExcept(roomName, Context.ConnectionId).PlayerJoined(roomName, Context.ConnectionId),
             });
             return gameRoom.gameOptions;
         }
 
         [SignalRMethod(
             summary: "Removes sender from the game room with given game room name.",
-            autoDiscover: AutoDiscover.Args
+            autoDiscover: AutoDiscover.Params
         )]
         public async Task LeaveGame(string roomName)
         {
@@ -97,14 +107,14 @@ namespace ChessWeb.Api.Hubs
 
         [SignalRMethod(
             summary: "If possible performs given move on board in the game room with given game room name.",
-            autoDiscover: AutoDiscover.Args
+            autoDiscover: AutoDiscover.Params
         )]
         public async Task PerformMove(string roomName, BoardMove move)
         {
             var gameRoom = this.gameService.GetGameRoom(roomName);
             if (gameRoom.TryPerformMove(Context.ConnectionId, move))
             {
-                await Clients.Group(roomName).SendPerformedMove(roomName, move, gameRoom.GetTimer1(), gameRoom.GetTimer2());
+                await Clients.Group(roomName).PerformMove(roomName, move, gameRoom.GetTimer1(), gameRoom.GetTimer2());
             }
         }
     }
