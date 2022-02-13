@@ -15,7 +15,8 @@ namespace ChessWeb.Api.Hubs
         Task GameOptionsChanged(string roomName, GameOptions gameOptions);
         Task PerformMove(string roomName, BoardMove move, SharedClock clock1, SharedClock clock2);
         Task GameEnded(string roomName, PieceColor? winner);
-        Task ServerMessage(string roomName, string message);
+        Task PlayerLeft(string roomName, string player);
+        Task PlayerJoined(string roomName, string player);
     }
 
 
@@ -57,7 +58,7 @@ namespace ChessWeb.Api.Hubs
                     gameRoom.ResetGame();
                     Task.WaitAll(new Task[] {
                         Clients.Group(roomName).GameOptionsChanged(roomName, gameRoom.gameOptions),
-                        Clients.Group(roomName).ServerMessage(roomName, "player left"),
+                        Clients.Group(roomName).PlayerLeft(roomName, user),
                     });
                 }
             }
@@ -89,7 +90,7 @@ namespace ChessWeb.Api.Hubs
 
             Task.WaitAll(new Task[] {
                  Clients.GroupExcept(roomName, Context.ConnectionId).GameOptionsChanged(roomName, gameRoom.gameOptions),
-                 Clients.GroupExcept(roomName, Context.ConnectionId).ServerMessage(roomName, "new player joined"),
+                 Clients.GroupExcept(roomName, Context.ConnectionId).PlayerJoined(roomName, Context.ConnectionId),
             });
             return gameRoom.gameOptions;
         }
