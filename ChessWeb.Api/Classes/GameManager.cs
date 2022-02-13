@@ -3,9 +3,6 @@ using ChessClassLibrary.Games;
 using ChessClassLibrary.Models;
 using ChessWeb.Api.Models;
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
 
 namespace ChessWeb.Api.Classes
 {

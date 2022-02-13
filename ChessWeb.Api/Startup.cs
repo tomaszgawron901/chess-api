@@ -7,9 +7,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.OpenApi.Models;
-using System.Collections.Generic;
 using System.Linq;
-using System.Reflection;
 
 namespace ChessWeb.Api
 {
@@ -49,7 +47,7 @@ namespace ChessWeb.Api
             services.AddSwaggerGen(options =>
             {
                 options.SwaggerDoc("v1", new OpenApiInfo { Title = "Chess API v1", Version = "v1" });
-                options.DocumentFilter<SignalRSwaggerGen.SignalRSwaggerGen>(new List<Assembly> { typeof(GameHub).Assembly });
+                options.AddSignalRSwaggerGen();
             });
         }
 

@@ -1,13 +1,10 @@
 ﻿using ChessClassLibrary.enums;
-using ChessClassLibrary.Games;
 using ChessClassLibrary.Models;
 using ChessWeb.Api.Classes;
-using ChessWeb.Api.Extensions;
 using ChessWeb.Api.Hubs;
 using Microsoft.AspNetCore.SignalR;
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Threading.Tasks;
 
 namespace ChessWeb.Api.Services
@@ -15,8 +12,8 @@ namespace ChessWeb.Api.Services
     public class GameService 
     {
         private readonly Dictionary<string, GameRoom> GameRooms;
-        private readonly IHubContext<GameHub> gameHubContext;
-        public GameService(IHubContext<GameHub> gameHubContext)
+        private readonly IHubContext<GameHub, IGameHubClient> gameHubContext;
+        public GameService(IHubContext<GameHub, IGameHubClient> gameHubContext)
         {
             this.GameRooms = new Dictionary<string, GameRoom>();
 
@@ -52,7 +49,7 @@ namespace ChessWeb.Api.Services
 
         private async Task NotifyGameEnd(string key, PieceColor? winner)
         {
-            await this.gameHubContext.Clients.Group(key).NotifyGameEnd(key, winner);
+            await gameHubContext.Clients.Group(key).GameEnded(key, winner);
         }
 
         public GameOptions GetGameOptionsByKey(string gameKey)
