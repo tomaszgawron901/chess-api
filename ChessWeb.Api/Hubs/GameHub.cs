@@ -1,11 +1,11 @@
-﻿using ChessClassLibrary.Models;
-using ChessWeb.Api.Services;
+﻿using ChessWeb.Api.Services;
 using Microsoft.AspNetCore.SignalR;
 using System;
 using System.Threading.Tasks;
 using SignalRSwaggerGen.Attributes;
 using SignalRSwaggerGen.Enums;
 using ChessWeb.Api.Models;
+using ChessClassLibrary.Models;
 using ChessClassLibrary.enums;
 
 namespace ChessWeb.Api.Hubs
