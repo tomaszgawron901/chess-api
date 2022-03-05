@@ -112,7 +112,6 @@ namespace ChessWeb.Api.Classes
             return false;
         }
 
-
         public bool RemovePlayer(string player)
         {
 
@@ -130,7 +129,6 @@ namespace ChessWeb.Api.Classes
             }
             return true;
         }
-
         public bool IsRoomEmpty()
         {
             return this.gameOptions.Player1 == null && this.gameOptions.Player2 == null;
@@ -158,7 +156,6 @@ namespace ChessWeb.Api.Classes
                 this.gameManager.Dispose();
             }
         }
-
         ~GameRoom()
         {
             this.Dispose();

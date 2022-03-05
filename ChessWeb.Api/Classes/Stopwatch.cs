@@ -20,7 +20,6 @@ namespace ChessWeb.Api.Classes
         public void Start()
         {
             this.timer.Interval = time;
-            Console.WriteLine(time);
             this.start = DateTime.Now;
             this.timer.Start();
         }
