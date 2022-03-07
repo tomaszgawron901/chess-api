@@ -1,7 +1,7 @@
-﻿using ChessClassLibrary.enums;
-using ChessClassLibrary.Games;
-using ChessClassLibrary.Games.ClassicGame;
-using ChessClassLibrary.Models;
+﻿using ChessClassLib.Enums;
+using ChessClassLib.Models;
+using ChessWeb.Api.Exceptions;
+using ChessWeb.Api.Extensions;
 using ChessWeb.Api.Models;
 using System;
 
@@ -12,91 +12,68 @@ namespace ChessWeb.Api.Classes
         public GameOptions gameOptions;
         private GameManager gameManager;
 
-        private Action<PieceColor?> afterWin;
-
-        public GameRoom(Action<PieceColor?> afterWin)
+        public GameRoom() {}
+        public GameManager StartNewGame()
         {
-            this.afterWin = afterWin;
+            if (gameOptions != null)
+            {
+                if (gameManager != null) { gameManager.Dispose(); }
+                gameManager = new GameManager(
+                    gameOptions.GameVarient.ConvertToGame(),
+                    60000D * gameOptions.MinutesPerSide,
+                    1000D * gameOptions.IncrementInSeconds
+                );
+                return gameManager;
+            }
+            return null;
         }
 
-        public void StartNewGame(GameOptions gameOptions)
+        public GameManager StartNewGame(GameOptions gameOptions)
         {
             this.gameOptions = gameOptions;
-            this.gameManager = new GameManager(
-                this.ConverGameVarientToGame(this.gameOptions.GameVarient), 
-                60000D * this.gameOptions.MinutesPerSide, 
-                1000D * this.gameOptions.IncrementInSeconds,
-                this.afterWin
-            );
+            return StartNewGame();
         }
 
         public SharedClock GetTimer1() => gameManager.GetTimer1();
         public SharedClock GetTimer2() => gameManager.GetTimer2();
 
-        private IGame ConverGameVarientToGame(GameVarient gameVarient)
-        {
-            switch (gameVarient)
-            {
-                case GameVarient.Standard:
-                    return new ClassicGame();
-                case GameVarient.Knightmate:
-                    return new KnightmateGame();
-                default:
-                    return new ClassicGame();
-            }
-        }
-
-        public void ResetGame()
-        {
-            if (this.gameOptions != null)
-            {
-                this.gameManager.Dispose();
-                this.StartNewGame(this.gameOptions);
-            }
-        }
-
         private bool IsPlayerInRoom(string player)
         {
-            return this.gameOptions?.Player1 == player || this.gameOptions?.Player2 == player;
+            return gameOptions?.Player1 == player || gameOptions?.Player2 == player;
         }
 
-        private PieceColor ConvertPlayerToColor(string player)
+        private PieceColor GetPlayerColor(string player)
         {
-            if(this.gameOptions.Player1 == player)
+            if(gameOptions.Player1 == player)
             {
                 return PieceColor.White;
             }
-            else if(this.gameOptions.Player2 == player)
+            else if(gameOptions.Player2 == player)
             {
                 return PieceColor.Black;
             }
 
-            throw new InvalidCastException();
+            throw new PlayerNotInTheGameRoomException();
         }
 
-        public void AddMissingPlayer(string player)
+        public bool TryAddMissingPlayer(string player)
         {
-            if (this.gameOptions.Side == PieceColor.White)
+            if (gameOptions.Side == PieceColor.White)
             {
-                if (!(this.TryAddPlayer1(player) || this.TryAddPlayer2(player)))
-                {
-                    throw new Exception("Room is full.");
-                }
+                return TryAddPlayer1(player) || TryAddPlayer2(player);
             }
-            else if(this.gameOptions.Side == PieceColor.Black)
+            else if(gameOptions.Side == PieceColor.Black)
             {
-                if (!(this.TryAddPlayer2(player) || this.TryAddPlayer1(player)))
-                {
-                    throw new Exception("Room is full.");
-                }
+                return TryAddPlayer2(player) || TryAddPlayer1(player);
             }
+            return false;
         }
 
         private bool TryAddPlayer1(string player)
         {
-            if (this.gameOptions.Player1 == null)
+            if (gameOptions.Player1 == null)
             {
-                this.gameOptions.Player1 = player;
+                gameOptions.Player1 = player;
                 return true;
             }
             return false;
@@ -104,9 +81,9 @@ namespace ChessWeb.Api.Classes
 
         private bool TryAddPlayer2(string player)
         {
-            if (this.gameOptions.Player2 == null)
+            if (gameOptions.Player2 == null)
             {
-                this.gameOptions.Player2 = player;
+                gameOptions.Player2 = player;
                 return true;
             }
             return false;
@@ -115,13 +92,13 @@ namespace ChessWeb.Api.Classes
         public bool RemovePlayer(string player)
         {
 
-            if (this.gameOptions.Player1 == player)
+            if (gameOptions.Player1 == player)
             {
-                this.gameOptions.Player1 = null;
+                gameOptions.Player1 = null;
             }
-            else if(this.gameOptions.Player2 == player)
+            else if(gameOptions.Player2 == player)
             {
-                this.gameOptions.Player2 = null;
+                gameOptions.Player2 = null;
             }
             else
             {
@@ -129,36 +106,36 @@ namespace ChessWeb.Api.Classes
             }
             return true;
         }
-        public bool IsRoomEmpty()
+        public bool IsEmpty()
         {
-            return this.gameOptions.Player1 == null && this.gameOptions.Player2 == null;
+            return gameOptions.Player1 == null && gameOptions.Player2 == null;
         }
 
-        public bool IsRoomFull()
+        public bool IsFull()
         {
-            return !(this.gameOptions.Player1 == null || this.gameOptions.Player2 == null);
+            return !(gameOptions.Player1 == null || gameOptions.Player2 == null);
         }
 
         public GameOptions GetGameOptions()
         {
-            return this.gameOptions;
+            return gameOptions;
         }
 
         public bool TryPerformMove(string player, BoardMove move)
         {
-            return IsRoomFull() && this.IsPlayerInRoom(player) && this.gameManager.TryPerformMove(this.ConvertPlayerToColor(player), move);
+            return IsFull() && IsPlayerInRoom(player) && gameManager.TryPerformMove(GetPlayerColor(player), move);
         }
 
         public void Dispose()
         {
-            if(this.gameManager != null)
+            if(gameManager != null)
             {
-                this.gameManager.Dispose();
+                gameManager.Dispose();
             }
         }
         ~GameRoom()
         {
-            this.Dispose();
+            Dispose();
         }
     }
 }

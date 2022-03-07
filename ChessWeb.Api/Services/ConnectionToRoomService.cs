@@ -1,28 +1,58 @@
-﻿using System.Collections.Generic;
+﻿using ChessWeb.Api.Hubs;
+using Microsoft.AspNetCore.SignalR;
+using System.Collections.Generic;
+using System.Threading.Tasks;
 
 namespace ChessWeb.Api.Services
 {
     public class ConnectionToRoomService
     {
         private readonly Dictionary<string, string> ConnectionToRoomDictionary;
-        public ConnectionToRoomService()
+        private readonly IHubContext<GameHub, IGameHubClient> HubContext;
+        public ConnectionToRoomService(IHubContext<GameHub, IGameHubClient> gameHubContext)
         {
-            this.ConnectionToRoomDictionary = new Dictionary<string, string>();
+            ConnectionToRoomDictionary = new Dictionary<string, string>();
+            HubContext = gameHubContext;
         }
 
-        public void AddRoomConnection(string connection, string roomId)
+        public bool IsConnected(string connectionId)
         {
-            this.ConnectionToRoomDictionary.Add(connection, roomId);
+            return ConnectionToRoomDictionary.ContainsKey(connectionId);
         }
 
-        public void RemoveRoomConnection(string connection)
+        public bool IsConnectedTo(string connectionId, string gameCode)
         {
-            this.ConnectionToRoomDictionary.Remove(connection);
+            string gameCode2;
+            return TryGetConnectionRoomKey(connectionId, out gameCode2) && gameCode2 == gameCode;
         }
 
-        public string GetRoomId(string connection)
+        public async Task<bool> AddRoomConnection(string connection, string roomKey)
         {
-            return ConnectionToRoomDictionary.GetValueOrDefault(connection);
+            if(ConnectionToRoomDictionary.TryAdd(connection, roomKey))
+            {
+                await HubContext.Groups.AddToGroupAsync(connection, roomKey);
+                return true;
+            }
+            return false;
+        }
+
+        public Task<bool> TryRemoveConnection(string connectionId, out string roomKey)
+        {
+            if(ConnectionToRoomDictionary.Remove(connectionId, out roomKey))
+            {
+                return HubContext.Groups.RemoveFromGroupAsync(connectionId, roomKey).ContinueWith( x => true);
+            }
+            return Task.FromResult(false);
+        }
+
+        public Task<bool> TryRemoveConnection(string connectionId)
+        {
+            return TryRemoveConnection(connectionId, out _);
+        }
+
+        public bool TryGetConnectionRoomKey(string connectionId, out string roomKey)
+        {
+            return ConnectionToRoomDictionary.TryGetValue(connectionId, out roomKey);
         }
     }
 }

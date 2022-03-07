@@ -12,41 +12,41 @@ namespace ChessWeb.Api.Classes
         public Stopwatch(double time, ElapsedEventHandler after)
         {
             this.time = time;
-            this.timer = new Timer();
-            this.timer.Elapsed += after;
-            this.timer.AutoReset = false;
+            timer = new Timer();
+            timer.Elapsed += after;
+            timer.AutoReset = false;
         }
 
         public void Start()
         {
-            this.timer.Interval = time;
-            this.start = DateTime.Now;
-            this.timer.Start();
+            timer.Interval = time;
+            start = DateTime.Now;
+            timer.Start();
         }
 
         public void Stop()
         {
-            this.timer.Stop();
-            this.time -= (DateTime.Now - start).TotalMilliseconds;
+            timer.Stop();
+            time -= (DateTime.Now - start).TotalMilliseconds;
         }
 
         public void AddTime(double time)
         {
             this.time += time;
-            this.timer.Interval = this.time;
+            timer.Interval = this.time;
         }
 
         public void Dispose()
         {
-            if (this.timer != null)
+            if (timer != null)
             {
-                this.timer.Dispose();
+                timer.Dispose();
             }
         }
 
         ~Stopwatch()
         {
-            this.Dispose();
+            Dispose();
         }
     }
 }
