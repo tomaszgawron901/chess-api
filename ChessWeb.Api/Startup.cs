@@ -35,10 +35,10 @@ namespace ChessWeb.Api
                     });
             });
 
-            services.AddSingleton<GameService>();
+            services.AddSingleton<GameRoomsService>();
             services.AddSingleton<ConnectionToRoomService>();
             services.AddControllers();
-            services.AddSignalR().AddAzureSignalR();
+            services.AddSignalR().AddMessagePackProtocol().AddAzureSignalR();
             services.AddResponseCompression(opts =>
             {
                 opts.MimeTypes = ResponseCompressionDefaults.MimeTypes.Concat(

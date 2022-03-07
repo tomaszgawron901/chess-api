@@ -1,93 +1,37 @@
-﻿using ChessClassLibrary.enums;
-using ChessClassLibrary.Games;
-using ChessClassLibrary.Models;
+﻿using ChessClassLib.Enums;
+using ChessClassLib.Models;
 using ChessWeb.Api.Models;
+using hessClassLibrary.Logic.Games;
 using System;
 
 namespace ChessWeb.Api.Classes
 {
-    internal class TimerManager: IDisposable
-    {
-        public Stopwatch timer;
-        public bool moved;
-        public double increment;
-        public bool isGoing { get; private set; }
-
-        public TimerManager(double time, double increment, Action after)
-        {
-            this.timer = new Stopwatch(time, (sender, e) => {
-                after();
-                this.Ended = true;
-            });
-            this.increment = increment;
-            this.moved = false;
-            this.Ended = false;
-            this.isGoing = false;
-        }
-
-        public bool Ended { get; private set; }
-
-        public void Stop()
-        {
-            this.timer.Stop();
-            this.isGoing = false;
-        }
-
-        public void HasMoved()
-        {
-            if(moved)
-            {
-                this.Stop();
-                this.timer.AddTime(this.increment);
-            }
-            else
-            {
-                this.moved = true;
-            }
-        }
-
-        public void TryStart()
-        {
-            if(moved)
-            {
-                this.timer.Start();
-                this.isGoing = true;
-            }
-        }
-
-        public void Dispose()
-        {
-            this.timer.Dispose();
-        }
-    }
-
     public class GameManager: IDisposable
     {
         private IGame game;
 
-        private TimerManager whiteTimer;
-        private TimerManager blackTimer;
+        private ChessTimerManager whiteTimer;
+        private ChessTimerManager blackTimer;
 
-        private Action<PieceColor?> afterWin;
-        public GameManager(IGame game, double time, double increment, Action<PieceColor?> afterWin)
+        public Action<PieceColor?> AfterTimeEnds { get; set; }
+        public GameManager(IGame game, double time, double increment)
         {
             this.game = game;
-            whiteTimer = new TimerManager(time, increment, () => this.AfterGameEnd(PieceColor.Black));
-            blackTimer = new TimerManager(time, increment, () => this.AfterGameEnd(PieceColor.White));
-            this.afterWin = afterWin;
-            this.GameState = GameState.NotStarted;
+            whiteTimer = new ChessTimerManager(time, increment, () => _afterTimeEnds(PieceColor.Black));
+            blackTimer = new ChessTimerManager(time, increment, () => _afterTimeEnds(PieceColor.White));
+            GameState = GameState.NotStarted;
         }
 
         public GameState GameState { get; private set; }
 
-        private void AfterGameEnd(PieceColor? winner)
+        private void _afterTimeEnds(PieceColor? winner)
         {
             if(GameState != GameState.Ended)
             {
-                this.GameState = GameState.Ended;
-                this.blackTimer.Stop();
-                this.whiteTimer.Stop();
-                this.afterWin(winner);
+                GameState = GameState.Ended;
+                blackTimer.Stop();
+                whiteTimer.Stop();
+                AfterTimeEnds(winner);
             }
         }
 
@@ -96,25 +40,24 @@ namespace ChessWeb.Api.Classes
 
         public bool TryPerformMove(PieceColor color, BoardMove move)
         {
-            if(this.GameState != GameState.Ended && this.game.CurrentPlayerColor == color && this.game.CanPerformMove(move))
+            if(GameState != GameState.Ended && game.CurrentPlayerColor == color && game.TryPerformMove(move))
             {
-                this.game.PerformMove(move);
-                if(this.game.GameState == GameState.Ended)
+                if(game.GameState == GameState.Ended)
                 {
-                    this.AfterGameEnd(this.game.GetWinner());
+                    _afterTimeEnds(game.GetWinner());
                 }
                 else
                 {
                     if (color == PieceColor.White)
                     {
-                        this.whiteTimer.HasMoved();
-                        this.blackTimer.TryStart();
+                        whiteTimer.HasMoved();
+                        blackTimer.TryStart();
                     }
                     else if (color == PieceColor.Black)
                     {
 
-                        this.blackTimer.HasMoved();
-                        this.whiteTimer.TryStart();
+                        blackTimer.HasMoved();
+                        whiteTimer.TryStart();
                     }
                 }
                 return true;

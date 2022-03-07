@@ -5,8 +5,10 @@ using System.Threading.Tasks;
 using SignalRSwaggerGen.Attributes;
 using SignalRSwaggerGen.Enums;
 using ChessWeb.Api.Models;
-using ChessClassLibrary.Models;
-using ChessClassLibrary.enums;
+using ChessClassLib.Models;
+using ChessClassLib.Enums;
+using ChessWeb.Api.Classes;
+using ChessWeb.Api.Exceptions;
 
 namespace ChessWeb.Api.Hubs
 {
@@ -23,43 +25,37 @@ namespace ChessWeb.Api.Hubs
     [SignalRHub(path: "/gamehub")]
     public class GameHub: Hub<IGameHubClient>
     {
-        private readonly GameService gameService;
+        private readonly GameRoomsService gameRoomsService;
         private readonly ConnectionToRoomService connectionToRoomService;
         public GameHub(
-            GameService gameService,
+            GameRoomsService gameRoomsService,
             ConnectionToRoomService connectionToRoomService)
         {
-            this.gameService = gameService;
+            this.gameRoomsService = gameRoomsService;
             this.connectionToRoomService = connectionToRoomService;
-        }
-
-        [SignalRHidden]
-        public override Task OnConnectedAsync()
-        {
-            return base.OnConnectedAsync();
         }
 
         [SignalRHidden]
         public override async Task OnDisconnectedAsync(Exception exception)
         {
-            
-            var user = Context.ConnectionId;
-            var roomName = connectionToRoomService.GetRoomId(user);
-            var gameRoom = this.gameService.GetGameRoom(roomName);
-            connectionToRoomService.RemoveRoomConnection(user);
-            if(gameRoom.RemovePlayer(user))
-            {
-                if (gameRoom.IsRoomEmpty())
+            var connectionId = Context.ConnectionId;
+            string roomName;
+            GameRoom room;
+            if (
+                await connectionToRoomService.TryRemoveConnection(connectionId, out roomName) &&
+                gameRoomsService.TryGetGameRoom(roomName, out room) &&
+                room.RemovePlayer(connectionId)
+            ) {
+                if (room.IsEmpty())
                 {
-                    this.gameService.DeleteGameRoom(roomName);
+                    gameRoomsService.DeleteGameRoom(roomName);
                 }
                 else
                 {
-                    gameRoom.ResetGame();
-                    Task.WaitAll(new Task[] {
-                        Clients.Group(roomName).GameOptionsChanged(roomName, gameRoom.gameOptions),
-                        Clients.Group(roomName).PlayerLeft(roomName, user),
-                    });
+                    await Task.WhenAll(
+                        Clients.Group(roomName).GameOptionsChanged(roomName, room.gameOptions),
+                        Clients.Group(roomName).PlayerLeft(roomName, connectionId)
+                    );
                 }
             }
             await base.OnDisconnectedAsync(exception);
@@ -71,28 +67,44 @@ namespace ChessWeb.Api.Hubs
         )]
         public async Task<string> CreateGameRoom(GameOptions gameOptions)
         {
-            var roomCreationResult = this.gameService.CreateNewGameRoom();
-            roomCreationResult.gameRoom.StartNewGame(gameOptions);
-            return roomCreationResult.key;
-        }
+            var (key, gameRoom) = gameRoomsService.CreateNewGameRoom();
+            gameRoom.gameOptions = gameOptions;
 
+            return key;
+        }
 
         [SignalRMethod(
             summary: "Associates sender to game room with given name. Returns game options of the game room.",
             autoDiscover: AutoDiscover.Params
         )]
-        public async Task<GameOptions> JoinGame(string roomName)
+        public Task<GameOptions> JoinGame(string roomName)
         {
-            var gameRoom = this.gameService.GetGameRoom(roomName);
-            gameRoom.AddMissingPlayer(Context.ConnectionId);
-            connectionToRoomService.AddRoomConnection(Context.ConnectionId, roomName);
-            await Groups.AddToGroupAsync(Context.ConnectionId, roomName);
+            string connectionId = Context.ConnectionId;
+            if (connectionToRoomService.IsConnected(connectionId))
+            {
+                throw new AlreadyConnectedToRoomException();
+            }
 
-            Task.WaitAll(new Task[] {
-                 Clients.GroupExcept(roomName, Context.ConnectionId).GameOptionsChanged(roomName, gameRoom.gameOptions),
-                 Clients.GroupExcept(roomName, Context.ConnectionId).PlayerJoined(roomName, Context.ConnectionId),
-            });
-            return gameRoom.gameOptions;
+            GameRoom gameRoom;
+            if(gameRoomsService.TryGetGameRoom(roomName, out gameRoom))
+            {
+                if (gameRoom.TryAddMissingPlayer(connectionId))
+                {
+                    if(gameRoom.IsFull())
+                    {
+                        gameRoom.StartNewGame().AfterTimeEnds = async (winner) => await Clients.Group(roomName).GameEnded(roomName, winner);
+                    }
+
+                    return Task.WhenAll(
+                        Clients.Group(roomName).GameOptionsChanged(roomName, gameRoom.gameOptions),
+                        Clients.Group(roomName).PlayerJoined(roomName, Context.ConnectionId)
+                        )
+                        .ContinueWith(_ => connectionToRoomService.AddRoomConnection(connectionId, roomName)).Unwrap()
+                        .ContinueWith(_ => gameRoom.gameOptions);
+                }
+                throw new UnablToAddToGameRoomException();
+            }
+            throw new GameRoomDoesNotExistException();
         }
 
         [SignalRMethod(
@@ -101,7 +113,27 @@ namespace ChessWeb.Api.Hubs
         )]
         public async Task LeaveGame(string roomName)
         {
-            await Groups.RemoveFromGroupAsync(Context.ConnectionId, roomName);
+            var connectionId = Context.ConnectionId;
+            GameRoom room;
+            if (
+                connectionToRoomService.IsConnectedTo(connectionId, roomName) &&
+                await connectionToRoomService.TryRemoveConnection(connectionId) &&
+                gameRoomsService.TryGetGameRoom(roomName, out room) &&
+                room.RemovePlayer(connectionId)
+            )
+            {
+                if (room.IsEmpty())
+                {
+                    gameRoomsService.DeleteGameRoom(roomName);
+                }
+                else
+                {
+                    await Task.WhenAll(
+                        Clients.Group(roomName).GameOptionsChanged(roomName, room.gameOptions),
+                        Clients.Group(roomName).PlayerLeft(roomName, connectionId)
+                    );
+                }
+            }
         }
 
 
@@ -109,13 +141,20 @@ namespace ChessWeb.Api.Hubs
             summary: "If possible performs given move on board in the game room with given game room name.",
             autoDiscover: AutoDiscover.Params
         )]
-        public async Task PerformMove(string roomName, BoardMove move)
+        public async Task PerformMove(string roomKey, BoardMove move)
         {
-            var gameRoom = this.gameService.GetGameRoom(roomName);
-            if (gameRoom.TryPerformMove(Context.ConnectionId, move))
+            GameRoom gameRoom;
+            if(gameRoomsService.TryGetGameRoom(roomKey, out gameRoom))
             {
-                await Clients.Group(roomName).PerformMove(roomName, move, gameRoom.GetTimer1(), gameRoom.GetTimer2());
+                if (gameRoom.TryPerformMove(Context.ConnectionId, move))
+                {
+                    await Clients.Group(roomKey).PerformMove(roomKey, move, gameRoom.GetTimer1(), gameRoom.GetTimer2());
+                    return;
+                }
+                throw new UnableToPerformMoveException();
             }
+            throw new GameRoomDoesNotExistException();
+
         }
     }
 }
