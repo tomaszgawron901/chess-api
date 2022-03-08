@@ -1,4 +1,6 @@
 ﻿using ChessWeb.Api.Classes;
+using ChessWeb.Api.Hubs;
+using Microsoft.AspNetCore.SignalR;
 using System;
 using System.Collections.Generic;
 using System.Security.Cryptography;
@@ -9,7 +11,7 @@ namespace ChessWeb.Api.Services
 {
     public class GameRoomsService 
     {
-        private const int WAIT_UNTIL_ROOM_AUTO_DESTRUCTION = 60000; // 1 min
+        private const int TIME_UNTIL_ROOM_DESTRUCTION = 60000; // 1 min
 
         private sealed class GameRoomWithCancellation: IDisposable
         {
@@ -37,9 +39,11 @@ namespace ChessWeb.Api.Services
         }
 
         private readonly Dictionary<string, GameRoomWithCancellation> GameRooms;
-        public GameRoomsService()
+        private readonly IHubContext<GameHub, IGameHubClient> GameHubContext;
+        public GameRoomsService(IHubContext<GameHub, IGameHubClient> gameHubContext)
         {
             GameRooms = new Dictionary<string, GameRoomWithCancellation>();
+            GameHubContext = gameHubContext;
         }
 
         /// <summary>
@@ -67,28 +71,25 @@ namespace ChessWeb.Api.Services
             CancellationTokenSource cts = new CancellationTokenSource();
             CancellationToken ct = cts.Token;
 
-            string key = CreateHash();
+            string key = CreateKey();
 
-            GameRoom gameRoom = new GameRoom();
+            GameRoom gameRoom = new GameRoom(key, GameHubContext);
             GameRooms.Add(key, new GameRoomWithCancellation(gameRoom, cts));
 
-            _ = Task.Run(() =>
-            {
-                var canceled = ct.WaitHandle.WaitOne(WAIT_UNTIL_ROOM_AUTO_DESTRUCTION);
-                if (!canceled && gameRoom.IsEmpty())
-                {
-                    DeleteGameRoom(key);
-                }
+            _ = Task.Run(() => {
+                var canceled = ct.WaitHandle.WaitOne(TIME_UNTIL_ROOM_DESTRUCTION);
+                if (!canceled && gameRoom.IsEmpty()) DeleteGameRoom(key);
             }, ct);
 
             return (key, gameRoom);
         }
 
-        private static string CreateHash()
+        private static string CreateKey()
         {
             using (SHA256 alg = SHA256.Create())
             {
-                var bytes = alg.ComputeHash(BitConverter.GetBytes(DateTimeOffset.Now.ToUnixTimeMilliseconds()));
+                var msOffset = DateTimeOffset.Now.ToUnixTimeMilliseconds();
+                var bytes = alg.ComputeHash(BitConverter.GetBytes(msOffset));
                 return Convert.ToHexString(bytes);
             }
         }
