@@ -66,9 +66,9 @@ namespace ChessWeb.Api.Hubs
         )]
         public async Task<string> CreateGameRoom(GameOptions gameOptions)
         {
-            var (key, gameRoom) = gameRoomsService.CreateNewGameRoom();
+            var gameRoom = gameRoomsService.CreateNewGameRoom();
             gameRoom.GameOptions = gameOptions;
-            return key;
+            return gameRoom.RoomKey;
         }
 
         [SignalRMethod(

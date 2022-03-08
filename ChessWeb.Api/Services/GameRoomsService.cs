@@ -66,7 +66,11 @@ namespace ChessWeb.Api.Services
             return output;
         }
 
-        public (string key, GameRoom gameRoom) CreateNewGameRoom()
+        /// <summary>
+        /// Create new game room and add it to dictionary.
+        /// </summary>
+        /// <returns>created game room</returns>
+        public GameRoom CreateNewGameRoom()
         {
             CancellationTokenSource cts = new CancellationTokenSource();
             CancellationToken ct = cts.Token;
@@ -81,7 +85,7 @@ namespace ChessWeb.Api.Services
                 if (!canceled && gameRoom.IsEmpty()) DeleteGameRoom(key);
             }, ct);
 
-            return (key, gameRoom);
+            return gameRoom;
         }
 
         private static string CreateKey()
