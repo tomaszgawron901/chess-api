@@ -1,7 +1,4 @@
-﻿using ChessWeb.Api.Hubs;
-using Microsoft.AspNetCore.SignalR;
-using System.Collections.Generic;
-using System.Threading.Tasks;
+﻿using System.Collections.Generic;
 
 namespace ChessWeb.Api.Services
 {

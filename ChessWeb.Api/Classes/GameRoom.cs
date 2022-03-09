@@ -3,7 +3,6 @@ using ChessClassLib.Models;
 using ChessWeb.Api.Exceptions;
 using ChessWeb.Api.Extensions;
 using ChessWeb.Api.Hubs;
-using ChessWeb.Api.Models;
 using Microsoft.AspNetCore.SignalR;
 using System;
 using System.Threading.Tasks;
@@ -21,6 +20,7 @@ namespace ChessWeb.Api.Classes
             RoomKey = roomKey;
             HubContext = hubContext;
         }
+
         public void StartNewGame()
         {
             if (GameOptions != null)
@@ -31,10 +31,7 @@ namespace ChessWeb.Api.Classes
                     60000D * GameOptions.MinutesPerSide,
                     1000D * GameOptions.IncrementInSeconds
                 );
-                GameManager.AfterTimeEnds += async (winner) =>
-                {
-                    await HubContext.Clients.Group(RoomKey).GameEnded(RoomKey, winner);
-                };
+                GameManager.AfterTimeEnds += NotifyGameEnded;
             }
         }
 
@@ -42,6 +39,11 @@ namespace ChessWeb.Api.Classes
         {
             this.GameOptions = gameOptions;
             StartNewGame();
+        }
+
+        private async void NotifyGameEnded(PieceColor? winner)
+        {
+            await HubContext.Clients.Group(RoomKey).GameEnded(RoomKey, winner);
         }
 
         private bool IsPlayerInRoom(string player)

@@ -7,8 +7,6 @@ using System;
 
 namespace ChessWeb.Api.Classes
 {
-    
-
     public class GameManager : IDisposable
     {
         private IGame game;
@@ -34,7 +32,7 @@ namespace ChessWeb.Api.Classes
             if(GameState != GameState.Ended)
             {
                 GameState = GameState.Ended;
-                Winner = Winner;
+                Winner = winner;
                 blackTimer.Stop();
                 whiteTimer.Stop();
                 AfterTimeEnds.Invoke(winner);
@@ -51,6 +49,8 @@ namespace ChessWeb.Api.Classes
                 GameState = GameState.InProgress;
                 if(game.GameState == GameState.Ended)
                 {
+                    blackTimer.Stop();
+                    whiteTimer.Stop();
                     GameState = GameState.Ended;
                     Winner = game.GetWinner();
                 }
