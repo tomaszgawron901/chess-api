@@ -2,53 +2,62 @@
 using ChessClassLib.Models;
 using ChessWeb.Api.Exceptions;
 using ChessWeb.Api.Extensions;
-using ChessWeb.Api.Models;
+using ChessWeb.Api.Hubs;
+using Microsoft.AspNetCore.SignalR;
 using System;
+using System.Threading.Tasks;
 
 namespace ChessWeb.Api.Classes
 {
     public class GameRoom: IDisposable
     {
-        public GameOptions gameOptions;
-        private GameManager gameManager;
+        public GameOptions GameOptions { get; set; }
+        private GameManager GameManager { get; set; }
+        public string RoomKey { get; }
+        private IHubContext<GameHub, IGameHubClient> HubContext { get; }
 
-        public GameRoom() {}
-        public GameManager StartNewGame()
+        public GameRoom(string roomKey, IHubContext<GameHub, IGameHubClient> hubContext) {
+            RoomKey = roomKey;
+            HubContext = hubContext;
+        }
+
+        public void StartNewGame()
         {
-            if (gameOptions != null)
+            if (GameOptions != null)
             {
-                if (gameManager != null) { gameManager.Dispose(); }
-                gameManager = new GameManager(
-                    gameOptions.GameVarient.ConvertToGame(),
-                    60000D * gameOptions.MinutesPerSide,
-                    1000D * gameOptions.IncrementInSeconds
+                if (GameManager != null) { GameManager.Dispose(); }
+                GameManager = new GameManager(
+                    GameOptions.GameVarient.ConvertToGame(),
+                    60000D * GameOptions.MinutesPerSide,
+                    1000D * GameOptions.IncrementInSeconds
                 );
-                return gameManager;
+                GameManager.AfterTimeEnds += NotifyGameEnded;
             }
-            return null;
         }
 
-        public GameManager StartNewGame(GameOptions gameOptions)
+        public void StartNewGame(GameOptions gameOptions)
         {
-            this.gameOptions = gameOptions;
-            return StartNewGame();
+            this.GameOptions = gameOptions;
+            StartNewGame();
         }
 
-        public SharedClock GetTimer1() => gameManager.GetTimer1();
-        public SharedClock GetTimer2() => gameManager.GetTimer2();
+        private async void NotifyGameEnded(PieceColor? winner)
+        {
+            await HubContext.Clients.Group(RoomKey).GameEnded(RoomKey, winner);
+        }
 
         private bool IsPlayerInRoom(string player)
         {
-            return gameOptions?.Player1 == player || gameOptions?.Player2 == player;
+            return GameOptions?.Player1 == player || GameOptions?.Player2 == player;
         }
 
         private PieceColor GetPlayerColor(string player)
         {
-            if(gameOptions.Player1 == player)
+            if(GameOptions.Player1 == player)
             {
                 return PieceColor.White;
             }
-            else if(gameOptions.Player2 == player)
+            else if(GameOptions.Player2 == player)
             {
                 return PieceColor.Black;
             }
@@ -56,24 +65,39 @@ namespace ChessWeb.Api.Classes
             throw new PlayerNotInTheGameRoomException();
         }
 
-        public bool TryAddMissingPlayer(string player)
+        public async Task<bool> TryAddMissingPlayer(string player)
         {
-            if (gameOptions.Side == PieceColor.White)
+            if (player == null) return false;
+
+            if (GameOptions.Side == PieceColor.White)
             {
-                return TryAddPlayer1(player) || TryAddPlayer2(player);
+                if(!TryAddPlayer1(player) && !TryAddPlayer2(player))
+                {
+                    return false;
+                }
             }
-            else if(gameOptions.Side == PieceColor.Black)
+            else if(GameOptions.Side == PieceColor.Black)
             {
-                return TryAddPlayer2(player) || TryAddPlayer1(player);
+                if (!TryAddPlayer2(player) && !TryAddPlayer1(player))
+                {
+                    return false;
+                }
             }
-            return false;
+            else
+            {
+                return false;
+            }
+            await HubContext.Clients.Group(RoomKey).GameOptionsChanged(RoomKey, GameOptions);
+            await HubContext.Groups.AddToGroupAsync(player, RoomKey);
+            await HubContext.Clients.GroupExcept(RoomKey, player).PlayerJoined(RoomKey, player);
+            return true;
         }
 
         private bool TryAddPlayer1(string player)
         {
-            if (gameOptions.Player1 == null)
+            if (GameOptions.Player1 == null)
             {
-                gameOptions.Player1 = player;
+                GameOptions.Player1 = player;
                 return true;
             }
             return false;
@@ -81,56 +105,61 @@ namespace ChessWeb.Api.Classes
 
         private bool TryAddPlayer2(string player)
         {
-            if (gameOptions.Player2 == null)
+            if (GameOptions.Player2 == null)
             {
-                gameOptions.Player2 = player;
+                GameOptions.Player2 = player;
                 return true;
             }
             return false;
         }
 
-        public bool RemovePlayer(string player)
+        public async Task<bool> TryRemovePlayer(string player)
         {
-
-            if (gameOptions.Player1 == player)
+            if (GameOptions.Player1 == player)
             {
-                gameOptions.Player1 = null;
+                GameOptions.Player1 = null;
             }
-            else if(gameOptions.Player2 == player)
+            else if(GameOptions.Player2 == player)
             {
-                gameOptions.Player2 = null;
+                GameOptions.Player2 = null;
             }
             else
             {
                 return false;
             }
+            await HubContext.Groups.RemoveFromGroupAsync(player, RoomKey);
+            await HubContext.Clients.Group(RoomKey).PlayerLeft(RoomKey, player);
             return true;
         }
         public bool IsEmpty()
         {
-            return gameOptions.Player1 == null && gameOptions.Player2 == null;
+            return GameOptions.Player1 == null && GameOptions.Player2 == null;
         }
 
         public bool IsFull()
         {
-            return !(gameOptions.Player1 == null || gameOptions.Player2 == null);
+            return !(GameOptions.Player1 == null || GameOptions.Player2 == null);
         }
 
-        public GameOptions GetGameOptions()
+        public async Task<bool> TryPerformMove(string player, BoardMove move)
         {
-            return gameOptions;
-        }
-
-        public bool TryPerformMove(string player, BoardMove move)
-        {
-            return IsFull() && IsPlayerInRoom(player) && gameManager.TryPerformMove(GetPlayerColor(player), move);
+            if(IsFull() && IsPlayerInRoom(player) && GameManager.TryPerformMove(GetPlayerColor(player), move))
+            {
+                await HubContext.Clients.Group(RoomKey).PerformMove(RoomKey, move, GameManager.GetTimer1(), GameManager.GetTimer2());
+                if (GameManager.GameState == GameState.Ended)
+                {
+                    await HubContext.Clients.Group(RoomKey).GameEnded(RoomKey, GameManager.Winner);
+                }
+                return true;
+            }
+            return false;
         }
 
         public void Dispose()
         {
-            if(gameManager != null)
+            if(GameManager != null)
             {
-                gameManager.Dispose();
+                GameManager.Dispose();
             }
         }
         ~GameRoom()

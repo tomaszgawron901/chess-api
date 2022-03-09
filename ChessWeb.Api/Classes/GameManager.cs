@@ -1,19 +1,21 @@
 ﻿using ChessClassLib.Enums;
 using ChessClassLib.Models;
+using ChessWeb.Api.Delegates;
 using ChessWeb.Api.Models;
 using hessClassLibrary.Logic.Games;
 using System;
 
 namespace ChessWeb.Api.Classes
 {
-    public class GameManager: IDisposable
+    public class GameManager : IDisposable
     {
         private IGame game;
 
         private ChessTimerManager whiteTimer;
         private ChessTimerManager blackTimer;
 
-        public Action<PieceColor?> AfterTimeEnds { get; set; }
+        public WinnerDelegate AfterTimeEnds { get; set; }
+        
         public GameManager(IGame game, double time, double increment)
         {
             this.game = game;
@@ -23,15 +25,17 @@ namespace ChessWeb.Api.Classes
         }
 
         public GameState GameState { get; private set; }
+        public PieceColor? Winner { get; private set; }
 
-        private void _afterTimeEnds(PieceColor? winner)
+        private void _afterTimeEnds(PieceColor winner)
         {
             if(GameState != GameState.Ended)
             {
                 GameState = GameState.Ended;
+                Winner = winner;
                 blackTimer.Stop();
                 whiteTimer.Stop();
-                AfterTimeEnds(winner);
+                AfterTimeEnds.Invoke(winner);
             }
         }
 
@@ -42,9 +46,13 @@ namespace ChessWeb.Api.Classes
         {
             if(GameState != GameState.Ended && game.CurrentPlayerColor == color && game.TryPerformMove(move))
             {
+                GameState = GameState.InProgress;
                 if(game.GameState == GameState.Ended)
                 {
-                    _afterTimeEnds(game.GetWinner());
+                    blackTimer.Stop();
+                    whiteTimer.Stop();
+                    GameState = GameState.Ended;
+                    Winner = game.GetWinner();
                 }
                 else
                 {

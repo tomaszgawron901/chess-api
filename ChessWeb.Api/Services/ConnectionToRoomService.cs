@@ -1,18 +1,13 @@
-﻿using ChessWeb.Api.Hubs;
-using Microsoft.AspNetCore.SignalR;
-using System.Collections.Generic;
-using System.Threading.Tasks;
+﻿using System.Collections.Generic;
 
 namespace ChessWeb.Api.Services
 {
     public class ConnectionToRoomService
     {
         private readonly Dictionary<string, string> ConnectionToRoomDictionary;
-        private readonly IHubContext<GameHub, IGameHubClient> HubContext;
-        public ConnectionToRoomService(IHubContext<GameHub, IGameHubClient> gameHubContext)
+        public ConnectionToRoomService()
         {
             ConnectionToRoomDictionary = new Dictionary<string, string>();
-            HubContext = gameHubContext;
         }
 
         public bool IsConnected(string connectionId)
@@ -26,26 +21,25 @@ namespace ChessWeb.Api.Services
             return TryGetConnectionRoomKey(connectionId, out gameCode2) && gameCode2 == gameCode;
         }
 
-        public async Task<bool> AddRoomConnection(string connection, string roomKey)
+        public bool AddRoomConnection(string connection, string roomKey)
         {
             if(ConnectionToRoomDictionary.TryAdd(connection, roomKey))
             {
-                await HubContext.Groups.AddToGroupAsync(connection, roomKey);
                 return true;
             }
             return false;
         }
 
-        public Task<bool> TryRemoveConnection(string connectionId, out string roomKey)
+        public bool TryRemoveConnection(string connectionId, out string roomKey)
         {
             if(ConnectionToRoomDictionary.Remove(connectionId, out roomKey))
             {
-                return HubContext.Groups.RemoveFromGroupAsync(connectionId, roomKey).ContinueWith( x => true);
+                return true;
             }
-            return Task.FromResult(false);
+            return false;
         }
 
-        public Task<bool> TryRemoveConnection(string connectionId)
+        public bool TryRemoveConnection(string connectionId)
         {
             return TryRemoveConnection(connectionId, out _);
         }
