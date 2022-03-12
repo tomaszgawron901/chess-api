@@ -78,9 +78,21 @@ namespace ChessWeb.Api.Hubs
         public async Task<GameOptions> JoinGame(string roomName)
         {
             string connectionId = Context.ConnectionId;
-            if (connectionToRoomService.IsConnected(connectionId))
+            string connectedRoomKey;
+            if (connectionToRoomService.TryGetConnectionRoomKey(connectionId, out connectedRoomKey))
             {
-                throw new AlreadyConnectedToRoomException();
+                GameRoom connectedGameRoom;
+                if(gameRoomsService.TryGetGameRoom(connectedRoomKey, out connectedGameRoom))
+                {
+                    if(await connectedGameRoom.TryRemovePlayer(connectionId))
+                    {
+                        connectionToRoomService.TryRemoveConnection(connectionId);
+                        if (connectedGameRoom.IsEmpty())
+                        {
+                            gameRoomsService.DeleteGameRoom(connectedRoomKey);
+                        }
+                    }
+                }
             }
 
             GameRoom gameRoom;
