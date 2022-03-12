@@ -129,6 +129,7 @@ namespace ChessWeb.Api.Classes
             }
             await HubContext.Groups.RemoveFromGroupAsync(player, RoomKey);
             await HubContext.Clients.Group(RoomKey).PlayerLeft(RoomKey, player);
+            await HubContext.Clients.Group(RoomKey).GameOptionsChanged(RoomKey, GameOptions);
             return true;
         }
         public bool IsEmpty()

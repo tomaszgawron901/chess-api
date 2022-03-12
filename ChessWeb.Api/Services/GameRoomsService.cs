@@ -61,9 +61,9 @@ namespace ChessWeb.Api.Services
         public bool TryGetGameRoom(string roomKey, out GameRoom gameRoom)
         {
             GameRoomWithCancellation roomWithCancellation;
-            var output  = GameRooms.TryGetValue(roomKey, out roomWithCancellation);
-            gameRoom = roomWithCancellation.GameRoom;
-            return output;
+            var successful  = GameRooms.TryGetValue(roomKey, out roomWithCancellation);
+            gameRoom = successful ? roomWithCancellation.GameRoom : null;
+            return successful;
         }
 
         /// <summary>
