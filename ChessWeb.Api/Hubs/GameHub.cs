@@ -23,7 +23,7 @@ namespace ChessWeb.Api.Hubs
 
     public interface IGameHub
     {
-        Task<string> CreateGameRoom(GameOptions gameOptions);
+        Task<string> CreateGameRoom(CreateGameOptions gameOptions);
         Task<GameOptions> JoinGame(string roomName);
         Task LeaveGame(string roomName);
         Task PerformMove(string roomKey, BoardMove move);
@@ -64,10 +64,18 @@ namespace ChessWeb.Api.Hubs
             summary: "Creates a game room with given options and associates creator to the room. Returns the unique game key",
             autoDiscover: AutoDiscover.Params
         )]
-        public async Task<string> CreateGameRoom(GameOptions gameOptions)
+        public async Task<string> CreateGameRoom(CreateGameOptions gameOptions)
         {
             var gameRoom = gameRoomsService.CreateNewGameRoom();
-            gameRoom.GameOptions = gameOptions;
+            gameRoom.GameOptions = new GameOptions()
+            {
+                Player1 = null,
+                Player2 = null,
+                GameVarient = gameOptions.GameVarient,
+                IncrementInSeconds = gameOptions.IncrementInSeconds,
+                MinutesPerSide = gameOptions.MinutesPerSide,
+                Side = gameOptions.Side
+            };
             return gameRoom.RoomKey;
         }
 
