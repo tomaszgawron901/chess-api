@@ -3,6 +3,7 @@ using ChessClassLib.Models;
 using ChessWeb.Api.Exceptions;
 using ChessWeb.Api.Extensions;
 using ChessWeb.Api.Hubs;
+using ChessWeb.Api.Models;
 using Microsoft.AspNetCore.SignalR;
 using System;
 using System.Threading.Tasks;
