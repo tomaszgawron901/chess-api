@@ -35,7 +35,7 @@ namespace ChessWeb.Api
             services.AddSingleton<GameRoomsService>();
             services.AddSingleton<ConnectionToRoomService>();
             services.AddControllers();
-            services.AddSignalR().AddMessagePackProtocol().AddAzureSignalR();
+            services.AddSignalR().AddMessagePackProtocol();
             services.AddSwaggerGen(options =>
             {
                 options.SwaggerDoc("v1", new OpenApiInfo { Title = "Chess API v1", Version = "v1" });
